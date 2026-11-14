@@ -50,6 +50,7 @@ export interface Product {
   category: ProductCategory;
   price: number | null;
   active: boolean;
+  imageUrl?: string | null;
 }
 
 export interface RecipeItem {

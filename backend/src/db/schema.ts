@@ -74,6 +74,7 @@ export const products = sqliteTable("products", {
   category: text("category", { enum: PRODUCT_CATEGORIES }).notNull(),
   price: real("price"),
   active: integer("active", { mode: "boolean" }).notNull().default(true),
+  imageUrl: text("image_url"),
 });
 
 export const recipeItems = sqliteTable("recipe_items", {

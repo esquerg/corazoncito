@@ -17,6 +17,7 @@ const createSchema = z.object({
   category: z.enum(PRODUCT_CATEGORIES),
   price: z.number().min(0).nullable().optional(),
   active: z.boolean().optional().default(true),
+  imageUrl: z.string().url().nullable().optional(),
 });
 
 const updateSchema = createSchema.partial();

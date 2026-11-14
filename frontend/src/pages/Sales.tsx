@@ -1,11 +1,57 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Layout } from "../components/Layout";
-import { inputCls, labelCls } from "../components/ui";
+import { labelCls } from "../components/ui";
 import { api, ApiError } from "../lib/api";
-import type { Product, SaleSummaryRow } from "../lib/types";
+import type { Product, ProductCategory, SaleSummaryRow } from "../lib/types";
 
 type Toast = { kind: "ok" | "error"; text: string } | null;
+
+const CATEGORY_ICONS: Record<ProductCategory, string> = {
+  espresso: "☕",
+  cold: "🧊",
+  hot: "🍵",
+  special: "✨",
+};
+
+function ProductCard({
+  product,
+  selected,
+  onSelect,
+}: {
+  product: Product;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={
+        "flex flex-col items-center gap-1 rounded-xl border-2 p-3 text-center transition-colors " +
+        (selected
+          ? "border-terracotta-500 bg-terracotta-50 shadow-sm"
+          : "border-terracotta-100 bg-white hover:border-terracotta-300 hover:bg-terracotta-50")
+      }
+    >
+      {product.imageUrl ? (
+        <img
+          src={product.imageUrl}
+          alt={product.name}
+          className="h-12 w-12 rounded-lg object-cover"
+        />
+      ) : (
+        <span className="text-4xl leading-none">{CATEGORY_ICONS[product.category]}</span>
+      )}
+      <span className="mt-1 text-sm font-semibold leading-tight text-terracotta-900">
+        {product.name}
+      </span>
+      {product.price != null && (
+        <span className="text-xs text-terracotta-500">${product.price.toFixed(2)}</span>
+      )}
+    </button>
+  );
+}
 
 export function Sales() {
   const { t } = useTranslation();
@@ -17,7 +63,7 @@ export function Sales() {
   const [toast, setToast] = useState<Toast>(null);
 
   const [productId, setProductId] = useState("");
-  const [quantity, setQuantity] = useState("1");
+  const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -48,13 +94,13 @@ export function Sales() {
     setSubmitting(true);
     setToast(null);
     try {
-      const res = await api.createSale(Number(productId), Number(quantity), notes.trim() || null);
+      const res = await api.createSale(Number(productId), quantity, notes.trim() || null);
       let text = t("sales.soldOk", { qty: res.sale.quantity, name: res.sale.productName });
       if (res.lowStock.length > 0) {
         text += " " + t("sales.lowStockWarn", { names: res.lowStock.map((l) => l.name).join(", ") });
       }
       setToast({ kind: "ok", text });
-      setQuantity("1");
+      setQuantity(1);
       setNotes("");
       await loadAll();
     } catch (err) {
@@ -66,6 +112,9 @@ export function Sales() {
       setSubmitting(false);
     }
   }
+
+  const stepperBtn =
+    "flex h-10 w-10 items-center justify-center rounded-full border-2 border-terracotta-200 text-xl font-bold text-terracotta-700 hover:border-terracotta-400 hover:bg-terracotta-50 disabled:opacity-40";
 
   return (
     <Layout>
@@ -86,32 +135,72 @@ export function Sales() {
         </p>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
+      <div className="grid gap-6 lg:grid-cols-[400px_1fr]">
         <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-terracotta-100">
           <h2 className="mb-4 text-lg font-semibold text-terracotta-700">{t("sales.newSale")}</h2>
-          {products.length === 0 && !loading ? (
+
+          {loading ? (
+            <p className="text-sm text-terracotta-500">{t("common.loading")}</p>
+          ) : products.length === 0 ? (
             <p className="text-sm text-terracotta-500">{t("sales.noProducts")}</p>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label className={labelCls} htmlFor="sale-product">{t("sales.product")}</label>
-                <select id="sale-product" className={inputCls} value={productId} onChange={(e) => setProductId(e.target.value)} required>
+                <p className={labelCls}>{t("sales.product")}</p>
+                <div className="mt-1 grid grid-cols-2 gap-2">
                   {products.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}{p.price != null ? ` — $${p.price.toFixed(2)}` : ""}
-                    </option>
+                    <ProductCard
+                      key={p.id}
+                      product={p}
+                      selected={productId === String(p.id)}
+                      onSelect={() => setProductId(String(p.id))}
+                    />
                   ))}
-                </select>
+                </div>
               </div>
+
               <div>
-                <label className={labelCls} htmlFor="sale-qty">{t("sales.quantity")}</label>
-                <input id="sale-qty" type="number" min="1" step="1" className={inputCls} value={quantity} onChange={(e) => setQuantity(e.target.value)} required />
+                <p className={labelCls}>{t("sales.quantity")}</p>
+                <div className="mt-1 flex items-center gap-4">
+                  <button
+                    type="button"
+                    className={stepperBtn}
+                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                    disabled={quantity <= 1}
+                  >
+                    −
+                  </button>
+                  <span className="w-8 text-center text-2xl font-bold text-terracotta-900">
+                    {quantity}
+                  </span>
+                  <button
+                    type="button"
+                    className={stepperBtn}
+                    onClick={() => setQuantity((q) => q + 1)}
+                  >
+                    +
+                  </button>
+                </div>
               </div>
+
               <div>
-                <label className={labelCls} htmlFor="sale-notes">{t("sales.notes")}</label>
-                <input id="sale-notes" className={inputCls} placeholder={t("sales.notesPlaceholder")} value={notes} onChange={(e) => setNotes(e.target.value)} />
+                <label className={labelCls} htmlFor="sale-notes">
+                  {t("sales.notes")}
+                </label>
+                <input
+                  id="sale-notes"
+                  className="w-full rounded-lg border border-terracotta-200 bg-cream px-3 py-2.5 text-terracotta-900 outline-none focus:border-terracotta-500 focus:ring-2 focus:ring-terracotta-200"
+                  placeholder={t("sales.notesPlaceholder")}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
               </div>
-              <button type="submit" disabled={submitting} className="w-full rounded-lg bg-terracotta-500 px-4 py-3 text-lg font-semibold text-white hover:bg-terracotta-600 disabled:opacity-60">
+
+              <button
+                type="submit"
+                disabled={submitting || !productId}
+                className="w-full rounded-xl bg-terracotta-500 px-4 py-3.5 text-lg font-semibold text-white hover:bg-terracotta-600 disabled:opacity-60"
+              >
                 {submitting ? t("common.saving") : t("sales.register")}
               </button>
             </form>
@@ -122,7 +211,8 @@ export function Sales() {
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-terracotta-100 px-4 py-3">
             <h2 className="text-lg font-semibold text-terracotta-700">{t("sales.todayTitle")}</h2>
             <div className="text-sm text-terracotta-600">
-              <span className="font-semibold">{totals.units}</span> {t("sales.totalUnits").toLowerCase()} ·{" "}
+              <span className="font-semibold">{totals.units}</span>{" "}
+              {t("sales.totalUnits").toLowerCase()} ·{" "}
               <span className="font-semibold">${totals.revenue.toFixed(2)}</span>
             </div>
           </div>
@@ -144,7 +234,9 @@ export function Sales() {
                   <tr key={row.productId} className="border-b border-terracotta-50 last:border-0">
                     <td className="px-4 py-3 font-medium text-terracotta-900">{row.productName}</td>
                     <td className="px-4 py-3 text-right text-terracotta-700">{row.units}</td>
-                    <td className="px-4 py-3 text-right text-terracotta-700">${Number(row.revenue).toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right text-terracotta-700">
+                      ${Number(row.revenue).toFixed(2)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
