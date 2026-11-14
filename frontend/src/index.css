@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+@theme {
+  /* Paleta terracota — color primario de Corazoncito */
+  --color-terracotta-50: #fbf2ee;
+  --color-terracotta-100: #f4ddd4;
+  --color-terracotta-200: #e8b8a8;
+  --color-terracotta-300: #db937c;
+  --color-terracotta-400: #c87358;
+  --color-terracotta-500: #b5533a;
+  --color-terracotta-600: #99432e;
+  --color-terracotta-700: #7a3525;
+  --color-terracotta-800: #5c281c;
+  --color-terracotta-900: #3e1b13;
+
+  /* Fondos cálidos */
+  --color-cream: #fbf7f0;
+  --color-sand: #f3ebdd;
+
+  --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+  }
+  body {
+    background-color: var(--color-cream);
+    color: var(--color-terracotta-900);
+    -webkit-font-smoothing: antialiased;
+  }
+}
